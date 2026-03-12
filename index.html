@@ -1,25 +1,63 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #525659; }
+    #pdf-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 0;
+      gap: 8px;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      max-width: 100vw;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+  </style>
+</head>
+<body>
+  <div id="pdf-container"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    const container = document.getElementById('pdf-container');
+
+    pdfjsLib.getDocument('/Red_Bull_Showrun_AZ.pdf').promise.then(pdf => {
+      const renderPage = (pageNum) => {
+        return pdf.getPage(pageNum).then(page => {
+          const viewport = page.getViewport({ scale: 1 });
+          const dpr = window.devicePixelRatio || 1;
+          const scale = (window.innerWidth / viewport.width) * dpr;
+          const scaled = page.getViewport({ scale });
+
+          const canvas = document.createElement('canvas');
+          canvas.height = scaled.height;
+          canvas.width = scaled.width;
+          canvas.style.width = (scaled.width / dpr) + 'px';
+          canvas.style.height = (scaled.height / dpr) + 'px';
+          container.appendChild(canvas);
+
+          return page.render({
+            canvasContext: canvas.getContext('2d'),
+            viewport: scaled
+          }).promise;
+        });
+      };
+
+      const pages = [];
+      for (let i = 1; i <= pdf.numPages; i++) {
+        pages.push(renderPage(i));
       }
-      body {
-        overflow: hidden;
-      }
-      iframe {
-        width: 100vw;
-        height: 100vh;
-        border: none;
-      }
-    </style>
-  </head>
-  <body>
-    <iframe
-      src="/Red_Bull_Showrun_AZ.pdf#toolbar=0&navpanes=0&scrollbar=0"
-    ></iframe>
-  </body>
+      return Promise.all(pages);
+    });
+  </script>
+</body>
 </html>
